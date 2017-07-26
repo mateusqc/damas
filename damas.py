@@ -34,6 +34,9 @@ def desenha_tabuleiro(pecas):
 			x += tam_quad
 		y += tam_quad
 		x = 0
+	pygame.draw.rect(gameDisplay, burlywood, [560, 0, 800, 560])
+	pygame.draw.rect(gameDisplay, saddlebrown, [560, 0, 5, 560])
+
 
 def eh_peca(casa, pecas):
 	return pecas[casa[0]][casa[1]]
@@ -170,14 +173,14 @@ def mover_peca(peca_selec, casa, pecas):
 # cores pre-definidas
 black = (0, 0, 0)
 white = (255, 255, 255)
-dimgray = (105,105,105)
-lightgray = (211,211,211)
+dimgray = (105, 105, 105)
+lightgray = (211, 211, 211)
 red = (255, 0, 0)
 blue = (0, 0, 255)
 # tons de marrom
 saddlebrown = (139, 69, 19)
-sienna = (160,82,45)
-sandybrown = (244,164,96)
+sienna = (160, 82, 45)
+sandybrown = (244, 164, 96)
 burlywood = (222, 184, 135)
 wheat = (245, 222, 179)
 peru = (205, 133, 63)
