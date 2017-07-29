@@ -5,7 +5,7 @@ import time
 import pygame
 from pygame import gfxdraw
 
-def desenha_tabuleiro(pecas):
+def desenha_tabuleiro(pecas, num_jogadas, turno):
 	tam_quad = 70
 	x, y = 0, 0
 	for i in range (8):
@@ -37,8 +37,20 @@ def desenha_tabuleiro(pecas):
 	pygame.draw.rect(gameDisplay, burlywood, [560, 0, 800, 560])
 	pygame.draw.rect(gameDisplay, saddlebrown, [560, 0, 5, 560])
 
+	fonte_jogadas = pygame.font.SysFont(fonte_padrao, 20)
+	
+	if turno == 1:
+		turno_str = "Turno das Brancas"
+	else:
+		turno_str = "Turno das Pretas"
+
+	texto_jogadas = fonte_jogadas.render('Numero de Jogadas: %d' % num_jogadas, 1, saddlebrown)
+	texto_turno = fonte_jogadas.render(turno_str, 1, saddlebrown)
+	gameDisplay.blit(texto_jogadas, (610, 30))
+	gameDisplay.blit(texto_turno, (610, 60))
 
 def eh_peca(casa, pecas):
+	#retorna o tipo de peça presente na casa ou a ausência de uma
 	return pecas[casa[0]][casa[1]]
 	
 def eh_diagonal(casa1, casa2):
@@ -188,19 +200,24 @@ peru = (205, 133, 63)
 # 1 = preta; 2 = branca; 3 = dama preta; 4 = dama branca;
 pecas = [[1,0,1,0,1,0,1,0],
 		 [0,1,0,1,0,1,0,1],
-		 [1,0,3,0,1,0,1,0],
+		 [1,0,1,0,1,0,1,0],
 		 [0,0,0,0,0,0,0,0],
 		 [0,0,0,0,0,0,0,0],
-		 [0,4,0,2,0,2,0,2],
+		 [0,2,0,2,0,2,0,2],
 		 [2,0,2,0,2,0,2,0],
 		 [0,2,0,2,0,2,0,2]]
 
 pygame.init()
+
 gameDisplay = pygame.display.set_mode((800,560))
 pygame.display.set_caption('Damas')
 
+pygame.font.init()
+fonte_padrao = pygame.font.get_default_font()
+
 selecao = 0
 turno = 1
+num_jogadas = 0
 
 while True: #loop principal
 	for event in pygame.event.get():
@@ -218,17 +235,21 @@ while True: #loop principal
 				if selecao == 1:
 					if mover_peca(peca_selec, casa, pecas):
 						turno *= -1
+						num_jogadas += 1
 					selecao = 0
 				elif eh_peca(casa, pecas):
 					print "É PEÇA!"
 					peca_selec = casa
-					selecao = 1
+					if ((pecas[peca_selec[0]][peca_selec[1]] == 2 or pecas[peca_selec[0]][peca_selec[1]] == 4)  and turno == 1) or ((pecas[peca_selec[0]][peca_selec[1]] == 1 or pecas[peca_selec[0]][peca_selec[1]] == 3) and turno == -1):
+						selecao = 1
+					else:
+						print "Turno inválido!"
 			else:
 				selecao = 0
 						
 			
 	
 	gameDisplay.fill(white)
-	desenha_tabuleiro(pecas)
+	desenha_tabuleiro(pecas, num_jogadas, turno)
 	
 	pygame.display.update()
