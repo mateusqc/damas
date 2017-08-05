@@ -5,9 +5,15 @@ import time
 import pygame
 from pygame import gfxdraw
 
-def desenha_tabuleiro(pecas, num_jogadas, turno):
+def desenha_tabuleiro(pecas, num_jogadas, turno, mov_poss):
 	tam_quad = 70
 	x, y = 0, 0
+
+	ha_cap = False
+	for i in range(8):
+		if 2 in mov_poss[i]:
+			ha_cap = True
+
 	for i in range (8):
 		for j in range (8):
 			if (i + j) % 2 == 0:
@@ -15,6 +21,25 @@ def desenha_tabuleiro(pecas, num_jogadas, turno):
 			else:
 				cor = wheat
 			pygame.draw.rect(gameDisplay, cor, [x, y, tam_quad, tam_quad])
+
+			if not ha_cap:
+				if mov_poss[i][j] != 0:
+					if mov_poss[i][j] == 1:
+						pygame.draw.rect(gameDisplay, cyan, [x, y, 3, tam_quad])
+						pygame.draw.rect(gameDisplay, cyan, [x, y, tam_quad, 3])
+						pygame.draw.rect(gameDisplay, cyan, [x, y + tam_quad -3, tam_quad, 3])
+						pygame.draw.rect(gameDisplay, cyan, [x + tam_quad -3, y, 3, tam_quad])
+					else:
+						pygame.draw.rect(gameDisplay, red, [x, y, 3, tam_quad])
+						pygame.draw.rect(gameDisplay, red, [x, y, tam_quad, 3])
+						pygame.draw.rect(gameDisplay, red, [x, y + tam_quad -3, tam_quad, 3])
+						pygame.draw.rect(gameDisplay, red, [x + tam_quad -3, y, 3, tam_quad])
+			else:
+				if mov_poss[i][j] == 2:
+					pygame.draw.rect(gameDisplay, red, [x, y, 3, tam_quad])
+					pygame.draw.rect(gameDisplay, red, [x, y, tam_quad, 3])
+					pygame.draw.rect(gameDisplay, red, [x, y + tam_quad -3, tam_quad, 3])
+					pygame.draw.rect(gameDisplay, red, [x + tam_quad -3, y, 3, tam_quad])
 						
 			if pecas[i][j] == 1:
 				pygame.gfxdraw.filled_circle(gameDisplay, x + tam_quad/2, y + tam_quad/2, tam_quad/2 - 10, black)
@@ -115,13 +140,13 @@ def mov_dama_eh_livre(casa1, casa2, pecas, tipo_diag):
 	else:
 		return (0, casa_captura)
 
-def mover_peca(peca_selec, casa, pecas):
+def mover_peca(peca_selec, casa, pecas, mov_poss):
 	# retorna se houve movimento
 	tipo_peca = pecas[peca_selec[0]][peca_selec[1]]
 	eh_possivel = False
 	comeu = False
 	houve_mov = False
-	
+
 	# as casas estão dispostas em coordenadas (Y, X)
 	# adicionar damas e seus movimentos
 	
@@ -160,7 +185,13 @@ def mover_peca(peca_selec, casa, pecas):
 				eh_possivel = True
 				comeu = True
 
-		
+	ha_cap = False
+	for i in range(8):
+		if 2 in mov_poss[i]:
+			ha_cap = True
+
+	if ha_cap and mov_poss[casa[0]][casa[1]] != 2:
+		return False
 	
 	if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
 		pecas[casa[0]][casa[1]] = pecas[peca_selec[0]][peca_selec[1]]
@@ -182,6 +213,75 @@ def mover_peca(peca_selec, casa, pecas):
 	
 	return houve_mov
 
+def gera_matriz_movs_possiveis(peca_selec, pecas, mov_poss):
+	# retorna se houve movimento
+	tipo_peca = pecas[peca_selec[0]][peca_selec[1]]
+
+	
+	# as casas estão dispostas em coordenadas (Y, X)
+	# adicionar damas e seus movimentos
+	for i in range(8):
+		for j in range(8):
+			casa = (i, j)
+			eh_possivel = False
+			comeu = False
+
+			if tipo_peca == 1:
+				if casa[0] - peca_selec[0] == 1 and ((casa[1] == peca_selec[1] + 1) or (casa[1] == peca_selec[1] - 1)):
+					eh_possivel = True
+				elif casa[0] - peca_selec[0] == 2 and ((casa[1] == peca_selec[1] + 2) or (casa[1] == peca_selec[1] - 2)):
+					if casa[1] > peca_selec[1]:
+						casa_p_comer = (casa[0] - 1, casa[1] - 1)
+					else:
+						casa_p_comer = (casa[0] - 1, casa[1] + 1)
+					if pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4:
+						eh_possivel = True
+						comeu = True
+						
+			elif tipo_peca == 2:
+				if casa[0] - peca_selec[0] == -1 and ((casa[1] == peca_selec[1] + 1) or (casa[1] == peca_selec[1] - 1)):
+					eh_possivel = True
+				elif casa[0] - peca_selec[0] == -2 and ((casa[1] == peca_selec[1] + 2) or (casa[1] == peca_selec[1] - 2)):
+					if casa[1] > peca_selec[1]:
+						casa_p_comer = (casa[0] + 1, casa[1] - 1)
+					else:
+						casa_p_comer = (casa[0] + 1, casa[1] + 1)
+					if pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3:
+						eh_possivel = True
+						comeu = True
+						
+			elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
+				# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
+				tipo_diag = eh_diagonal(peca_selec, casa)
+				if tipo_diag:
+					tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
+					if tipo_mov_dama == 1:
+						eh_possivel = True
+					elif tipo_mov_dama == 2:
+						eh_possivel = True
+						comeu = True
+
+				
+			
+			if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
+				if comeu:
+					mov_poss[i][j] = 2
+				else:
+					mov_poss[i][j] = 1
+
+	print mov_poss
+
+def zera_movs_possiveis():
+	mov_poss = [[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0],
+		    	[0,0,0,0,0,0,0,0]]
+	return mov_poss
+
 # cores pre-definidas
 black = (0, 0, 0)
 white = (255, 255, 255)
@@ -189,6 +289,7 @@ dimgray = (105, 105, 105)
 lightgray = (211, 211, 211)
 red = (255, 0, 0)
 blue = (0, 0, 255)
+cyan = (0, 255, 255)
 # tons de marrom
 saddlebrown = (139, 69, 19)
 sienna = (160, 82, 45)
@@ -206,6 +307,15 @@ pecas = [[1,0,1,0,1,0,1,0],
 		 [0,2,0,2,0,2,0,2],
 		 [2,0,2,0,2,0,2,0],
 		 [0,2,0,2,0,2,0,2]]
+
+mov_poss = [[0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0],
+		    [0,0,0,0,0,0,0,0]]
 
 pygame.init()
 
@@ -233,15 +343,18 @@ while True: #loop principal
 				casa = mouse_y/70, mouse_x/70
 				
 				if selecao == 1:
-					if mover_peca(peca_selec, casa, pecas):
+					if mover_peca(peca_selec, casa, pecas, mov_poss):
 						turno *= -1
 						num_jogadas += 1
 					selecao = 0
+					mov_poss = zera_movs_possiveis()
+
 				elif eh_peca(casa, pecas):
 					print "É PEÇA!"
 					peca_selec = casa
 					if ((pecas[peca_selec[0]][peca_selec[1]] == 2 or pecas[peca_selec[0]][peca_selec[1]] == 4)  and turno == 1) or ((pecas[peca_selec[0]][peca_selec[1]] == 1 or pecas[peca_selec[0]][peca_selec[1]] == 3) and turno == -1):
 						selecao = 1
+						gera_matriz_movs_possiveis(peca_selec, pecas, mov_poss)
 					else:
 						print "Turno inválido!"
 			else:
@@ -250,6 +363,6 @@ while True: #loop principal
 			
 	
 	gameDisplay.fill(white)
-	desenha_tabuleiro(pecas, num_jogadas, turno)
+	desenha_tabuleiro(pecas, num_jogadas, turno, mov_poss)
 	
 	pygame.display.update()
