@@ -140,58 +140,107 @@ def mov_dama_eh_livre(casa1, casa2, pecas, tipo_diag):
 	else:
 		return (0, casa_captura)
 
-def mover_peca(peca_selec, casa, pecas, mov_poss):
+def eh_possivel_capturar(pecas, turno, houve_cap_antes): # verifica se é possivel capturar alguma peça no turno
+
+	if turno == 1:
+		resto_teste = 0 #peças brancas são pares
+	else:
+		resto_teste = 1 #peças pretas são ímpares
+
+	for i in range(8):
+		for j in range(8):
+			if pecas[i][j] % 2 == resto_teste and pecas[i][j] != 0:
+				movimentos = gera_matriz_movs_possiveis((i, j), pecas, houve_cap_antes)
+				for k in range(8):
+					if 2 in movimentos[k]:
+						return True
+	return False
+
+def mover_peca(peca_selec, casa, pecas, mov_poss, houve_cap_antes):
 	# retorna se houve movimento
 	tipo_peca = pecas[peca_selec[0]][peca_selec[1]]
 	eh_possivel = False
 	comeu = False
 	houve_mov = False
 
+	print "Houve cap antes?", houve_cap_antes
 	# as casas estão dispostas em coordenadas (Y, X)
-	# adicionar damas e seus movimentos
 	
-	if tipo_peca == 1:
-		if casa[0] - peca_selec[0] == 1 and ((casa[1] == peca_selec[1] + 1) or (casa[1] == peca_selec[1] - 1)):
-			eh_possivel = True
-		elif casa[0] - peca_selec[0] == 2 and ((casa[1] == peca_selec[1] + 2) or (casa[1] == peca_selec[1] - 2)):
-			if casa[1] > peca_selec[1]:
-				casa_p_comer = (casa[0] - 1, casa[1] - 1)
-			else:
-				casa_p_comer = (casa[0] - 1, casa[1] + 1)
-			if pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4:
+	# os testes abaixo devem ser feitos novamente para obter a casa_p_comer específica do movimento selecionado
+	if not houve_cap_antes:
+		if tipo_peca == 1:
+			if casa[0] - peca_selec[0] == 1 and abs(casa[1] - peca_selec[1]) == 1:
 				eh_possivel = True
-				comeu = True
-				
-	elif tipo_peca == 2:
-		if casa[0] - peca_selec[0] == -1 and ((casa[1] == peca_selec[1] + 1) or (casa[1] == peca_selec[1] - 1)):
-			eh_possivel = True
-		elif casa[0] - peca_selec[0] == -2 and ((casa[1] == peca_selec[1] + 2) or (casa[1] == peca_selec[1] - 2)):
-			if casa[1] > peca_selec[1]:
-				casa_p_comer = (casa[0] + 1, casa[1] - 1)
-			else:
-				casa_p_comer = (casa[0] + 1, casa[1] + 1)
-			if pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3:
+			elif casa[0] - peca_selec[0] == 2 and abs(casa[1] - peca_selec[1]) == 2:
+				if casa[1] > peca_selec[1]:
+					casa_p_comer = (casa[0] - 1, casa[1] - 1)
+				else:
+					casa_p_comer = (casa[0] - 1, casa[1] + 1)
+				if pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4:
+					eh_possivel = True
+					comeu = True
+					
+		elif tipo_peca == 2:
+			if casa[0] - peca_selec[0] == -1 and abs(casa[1] - peca_selec[1]) == 1:
 				eh_possivel = True
-				comeu = True
-				
-	elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
-		# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
-		tipo_diag = eh_diagonal(peca_selec, casa)
-		if tipo_diag:
-			tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
-			if tipo_mov_dama == 1:
-				eh_possivel = True
-			elif tipo_mov_dama == 2:
-				eh_possivel = True
-				comeu = True
+			elif casa[0] - peca_selec[0] == -2 and abs(casa[1] - peca_selec[1]) == 2:
+				if casa[1] > peca_selec[1]:
+					casa_p_comer = (casa[0] + 1, casa[1] - 1)
+				else:
+					casa_p_comer = (casa[0] + 1, casa[1] + 1)
+				if pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3:
+					eh_possivel = True
+					comeu = True
+					
+		elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
+			# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
+			tipo_diag = eh_diagonal(peca_selec, casa)
+			if tipo_diag:
+				tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
+				if tipo_mov_dama == 1:
+					eh_possivel = True
+				elif tipo_mov_dama == 2:
+					eh_possivel = True
+					comeu = True
+	else:
+		if tipo_peca == 1 or tipo_peca == 2:
+			if abs(casa[0] - peca_selec[0]) == 2 and abs(casa[1] - peca_selec[1]) == 2:
 
-	ha_cap = False
-	for i in range(8):
-		if 2 in mov_poss[i]:
-			ha_cap = True
+				if casa[0] < peca_selec[0]:
+					if casa[1] > peca_selec[1]:
+						casa_p_comer = (casa[0] + 1, casa[1] - 1)
+					else:
+						casa_p_comer = (casa[0] + 1, casa[1] + 1)
+				else:
+					if casa[1] > peca_selec[1]:
+						casa_p_comer = (casa[0] - 1, casa[1] - 1)
+					else:
+						casa_p_comer = (casa[0] - 1, casa[1] + 1)
+
+				if tipo_peca == 1 and (pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4) or tipo_peca == 2 and (pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3):
+					eh_possivel = True
+					comeu = True
+							
+		elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
+			# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
+			tipo_diag = eh_diagonal(peca_selec, casa)
+			if tipo_diag:
+				tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
+				if tipo_mov_dama == 1:
+					eh_possivel = True
+				elif tipo_mov_dama == 2:
+					eh_possivel = True
+					comeu = True		
+
+	if tipo_peca == 2 or tipo_peca == 4:
+		turno = 1
+	elif tipo_peca == 1 or tipo_peca == 3:
+		turno = -1
+
+	ha_cap = eh_possivel_capturar(pecas, turno, houve_cap_antes)
 
 	if ha_cap and mov_poss[casa[0]][casa[1]] != 2:
-		return False
+		return False, ha_cap, peca_selec, houve_cap_antes
 	
 	if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
 		pecas[casa[0]][casa[1]] = pecas[peca_selec[0]][peca_selec[1]]
@@ -202,74 +251,124 @@ def mover_peca(peca_selec, casa, pecas, mov_poss):
 		
 	if comeu:
 		pecas[casa_p_comer[0]][casa_p_comer[1]] = 0
-	
-	
-	#transforma ultima linha em dama
-	for j in range(8):
-		if pecas[0][j] == 2:
-			pecas[0][j] = 4
-		if pecas[7][j] == 1:
-			pecas[7][j] = 3
-	
-	return houve_mov
 
-def gera_matriz_movs_possiveis(peca_selec, pecas, mov_poss):
+	ha_cap_possivel = eh_possivel_capturar(pecas, turno, ha_cap)
+	
+	if not ha_cap_possivel: # só devemos transformar a peça em dama quando não houverem mais capturas a serem feitas
+		#transforma ultima linha em dama
+		for j in range(8):
+			if pecas[0][j] == 2:
+				pecas[0][j] = 4
+			if pecas[7][j] == 1:
+				pecas[7][j] = 3
+	
+	return houve_mov, ha_cap_possivel, casa, comeu
+
+def gera_matriz_movs_possiveis(peca_selec, pecas, houve_cap_antes):
 	# retorna se houve movimento
 	tipo_peca = pecas[peca_selec[0]][peca_selec[1]]
-
+	mov_poss = [[0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0],
+		        [0,0,0,0,0,0,0,0]]
 	
 	# as casas estão dispostas em coordenadas (Y, X)
 	# adicionar damas e seus movimentos
-	for i in range(8):
-		for j in range(8):
-			casa = (i, j)
-			eh_possivel = False
-			comeu = False
+	if not houve_cap_antes:
+		for i in range(8):
+			for j in range(8):
+				casa = (i, j)
+				eh_possivel = False
+				comeu = False
 
-			if tipo_peca == 1:
-				if casa[0] - peca_selec[0] == 1 and ((casa[1] == peca_selec[1] + 1) or (casa[1] == peca_selec[1] - 1)):
-					eh_possivel = True
-				elif casa[0] - peca_selec[0] == 2 and ((casa[1] == peca_selec[1] + 2) or (casa[1] == peca_selec[1] - 2)):
-					if casa[1] > peca_selec[1]:
-						casa_p_comer = (casa[0] - 1, casa[1] - 1)
-					else:
-						casa_p_comer = (casa[0] - 1, casa[1] + 1)
-					if pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4:
+				if tipo_peca == 1:
+					if casa[0] - peca_selec[0] == 1 and abs(casa[1] - peca_selec[1]) == 1:
 						eh_possivel = True
-						comeu = True
-						
-			elif tipo_peca == 2:
-				if casa[0] - peca_selec[0] == -1 and ((casa[1] == peca_selec[1] + 1) or (casa[1] == peca_selec[1] - 1)):
-					eh_possivel = True
-				elif casa[0] - peca_selec[0] == -2 and ((casa[1] == peca_selec[1] + 2) or (casa[1] == peca_selec[1] - 2)):
-					if casa[1] > peca_selec[1]:
-						casa_p_comer = (casa[0] + 1, casa[1] - 1)
-					else:
-						casa_p_comer = (casa[0] + 1, casa[1] + 1)
-					if pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3:
+					elif casa[0] - peca_selec[0] == 2 and abs(casa[1] - peca_selec[1]) == 2:
+						if casa[1] > peca_selec[1]:
+							casa_p_comer = (casa[0] - 1, casa[1] - 1)
+						else:
+							casa_p_comer = (casa[0] - 1, casa[1] + 1)
+						if pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4:
+							eh_possivel = True
+							comeu = True
+							
+				elif tipo_peca == 2:
+					if casa[0] - peca_selec[0] == -1 and abs(casa[1] - peca_selec[1]) == 1:
 						eh_possivel = True
-						comeu = True
-						
-			elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
-				# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
-				tipo_diag = eh_diagonal(peca_selec, casa)
-				if tipo_diag:
-					tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
-					if tipo_mov_dama == 1:
-						eh_possivel = True
-					elif tipo_mov_dama == 2:
-						eh_possivel = True
-						comeu = True
-
+					elif casa[0] - peca_selec[0] == -2 and abs(casa[1] - peca_selec[1]) == 2:
+						if casa[1] > peca_selec[1]:
+							casa_p_comer = (casa[0] + 1, casa[1] - 1)
+						else:
+							casa_p_comer = (casa[0] + 1, casa[1] + 1)
+						if pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3:
+							eh_possivel = True
+							comeu = True
+							
+				elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
+					# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
+					tipo_diag = eh_diagonal(peca_selec, casa)
+					if tipo_diag:
+						tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
+						if tipo_mov_dama == 1:
+							eh_possivel = True
+						elif tipo_mov_dama == 2:
+							eh_possivel = True
+							comeu = True		
 				
-			
-			if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
-				if comeu:
-					mov_poss[i][j] = 2
-				else:
-					mov_poss[i][j] = 1
+				if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
+					if comeu:
+						mov_poss[i][j] = 2
+					else:
+						mov_poss[i][j] = 1
 
-	print mov_poss
+	else:
+		for i in range(8):
+			for j in range(8):
+				casa = (i, j)
+				eh_possivel = False
+				comeu = False
+
+				if tipo_peca == 1 or tipo_peca == 2:
+					if abs(casa[0] - peca_selec[0]) == 2 and abs(casa[1] - peca_selec[1]) == 2:
+
+						if casa[0] < peca_selec[0]:
+							if casa[1] > peca_selec[1]:
+								casa_p_comer = (casa[0] + 1, casa[1] - 1)
+							else:
+								casa_p_comer = (casa[0] + 1, casa[1] + 1)
+						else:
+							if casa[1] > peca_selec[1]:
+								casa_p_comer = (casa[0] - 1, casa[1] - 1)
+							else:
+								casa_p_comer = (casa[0] - 1, casa[1] + 1)
+
+						if tipo_peca == 1 and (pecas[casa_p_comer[0]][casa_p_comer[1]] == 2 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 4) or tipo_peca == 2 and (pecas[casa_p_comer[0]][casa_p_comer[1]] == 1 or pecas[casa_p_comer[0]][casa_p_comer[1]] == 3):
+							eh_possivel = True
+							comeu = True
+							
+				elif tipo_peca == 3 or tipo_peca == 4: # como as damas se movimentam em todas as direções, ambas terão movimentos semelhantes
+					# inicialmente, deve-se obter a direção em que o movimento está sendo realizado
+					tipo_diag = eh_diagonal(peca_selec, casa)
+					if tipo_diag:
+						tipo_mov_dama, casa_p_comer = mov_dama_eh_livre(peca_selec, casa, pecas, tipo_diag)
+						if tipo_mov_dama == 1:
+							eh_possivel = True
+						elif tipo_mov_dama == 2:
+							eh_possivel = True
+							comeu = True		
+				
+				if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
+					if comeu:
+						mov_poss[i][j] = 2
+					else:
+						mov_poss[i][j] = 1
+
+	return mov_poss
 
 def zera_movs_possiveis():
 	mov_poss = [[0,0,0,0,0,0,0,0],
@@ -299,23 +398,16 @@ wheat = (245, 222, 179)
 peru = (205, 133, 63)
 
 # 1 = preta; 2 = branca; 3 = dama preta; 4 = dama branca;
-pecas = [[1,0,1,0,1,0,1,0],
-		 [0,1,0,1,0,1,0,1],
-		 [1,0,1,0,1,0,1,0],
+pecas = [[0,0,0,0,0,0,0,0],
+		 [0,0,1,0,1,0,1,0],
+		 [0,0,0,0,0,0,0,0],
+		 [0,0,1,0,1,0,1,0],
+		 [0,0,0,0,0,0,0,2],
 		 [0,0,0,0,0,0,0,0],
 		 [0,0,0,0,0,0,0,0],
-		 [0,2,0,2,0,2,0,2],
-		 [2,0,2,0,2,0,2,0],
-		 [0,2,0,2,0,2,0,2]]
+		 [0,0,0,2,0,0,0,0]]
 
-mov_poss = [[0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0],
-		    [0,0,0,0,0,0,0,0]]
+mov_poss = zera_movs_possiveis()
 
 pygame.init()
 
@@ -326,8 +418,11 @@ pygame.font.init()
 fonte_padrao = pygame.font.get_default_font()
 
 selecao = 0
-turno = 1
+turno = 1 # 1 brancas, -1 pretas
 num_jogadas = 0
+houve_cap_antes = False
+ainda_ha_cap = False
+ultima_peca = (-1, -1)
 
 while True: #loop principal
 	for event in pygame.event.get():
@@ -343,22 +438,28 @@ while True: #loop principal
 				casa = mouse_y/70, mouse_x/70
 				
 				if selecao == 1:
-					if mover_peca(peca_selec, casa, pecas, mov_poss):
+					houve_mov, ainda_ha_cap, ultima_peca, houve_cap_antes = mover_peca(peca_selec, casa, pecas, mov_poss, ainda_ha_cap)
+					if houve_mov and not houve_cap_antes:
 						turno *= -1
 						num_jogadas += 1
+						houve_cap_antes = False
+
 					selecao = 0
 					mov_poss = zera_movs_possiveis()
+					
+					
 
 				elif eh_peca(casa, pecas):
 					print "É PEÇA!"
 					peca_selec = casa
 					if ((pecas[peca_selec[0]][peca_selec[1]] == 2 or pecas[peca_selec[0]][peca_selec[1]] == 4)  and turno == 1) or ((pecas[peca_selec[0]][peca_selec[1]] == 1 or pecas[peca_selec[0]][peca_selec[1]] == 3) and turno == -1):
 						selecao = 1
-						gera_matriz_movs_possiveis(peca_selec, pecas, mov_poss)
+						mov_poss = gera_matriz_movs_possiveis(peca_selec, pecas, houve_cap_antes)
 					else:
 						print "Turno inválido!"
 			else:
 				selecao = 0
+				mov_poss = zera_movs_possiveis()
 						
 			
 	
