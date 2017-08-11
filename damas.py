@@ -172,7 +172,15 @@ def mov_dama_eh_livre(casa1, casa2, pecas, tipo_diag):
 	else:
 		return (0, casa_captura)
 
-def eh_possivel_capturar(pecas, turno, capturas_suce): # verifica se é possivel capturar alguma peça no turno
+def eh_possivel_capturar_especifico(pecas, turno, capturas_suce, peca_selec): # verifica se uma peça específica pode capturar alguma peça no turno
+
+	movimentos = gera_matriz_movs_possiveis(peca_selec, pecas, capturas_suce, turno)
+	for k in range(8):
+		if 2 in movimentos[k]:
+			return True
+	return False
+
+def eh_possivel_capturar_geral(pecas, turno, capturas_suce): # verifica se é possivel capturar alguma peça no turno
 
 	if turno == 1:
 		resto_teste = 0 #peças brancas são pares
@@ -188,12 +196,22 @@ def eh_possivel_capturar(pecas, turno, capturas_suce): # verifica se é possivel
 						return True
 	return False
 
-def mover_peca(peca_selec, casa, pecas, mov_poss, capturas_suce):
+def mover_peca(peca_selec, casa, pecas, mov_poss, capturas_suce, casa_atual):
 	# retorna se houve movimento
 	tipo_peca = pecas[peca_selec[0]][peca_selec[1]]
 	eh_possivel = False
 	comeu = False
 	houve_mov = False
+
+	if len(capturas_suce) > 0:
+		houve_cap_antes = True
+	else:
+		houve_cap_antes = False
+
+	if tipo_peca == 2 or tipo_peca == 4:
+		turno = 1
+	elif tipo_peca == 1 or tipo_peca == 3:
+		turno = -1
 	# as casas estão dispostas em coordenadas (Y, X)
 	
 	# os testes abaixo devem ser feitos novamente para obter a casa_p_comer específica do movimento selecionado
@@ -232,27 +250,31 @@ def mover_peca(peca_selec, casa, pecas, mov_poss, capturas_suce):
 				eh_possivel = True
 				comeu = True			
 
-	if tipo_peca == 2 or tipo_peca == 4:
-		turno = 1
-	elif tipo_peca == 1 or tipo_peca == 3:
-		turno = -1
-
-	ha_cap = eh_possivel_capturar(pecas, turno, capturas_suce)
-
-	if ha_cap and mov_poss[casa[0]][casa[1]] != 2:
-		return False, ha_cap
+	if eh_possivel_capturar_geral(pecas, turno, capturas_suce) and mov_poss[casa[0]][casa[1]] != 2 and not houve_cap_antes:
+		return False, True, casa_atual
+	elif eh_possivel_capturar_especifico(pecas, turno, capturas_suce, casa_atual) and mov_poss[casa[0]][casa[1]] != 2:
+		return False, True, casa_atual
 	
 	if pecas[casa[0]][casa[1]] == 0 and peca_selec != casa and eh_possivel:
 		pecas[casa[0]][casa[1]] = pecas[peca_selec[0]][peca_selec[1]]
 		pecas[peca_selec[0]][peca_selec[1]] = 0
 		houve_mov = True
+		casa_atual = casa
 	else:
 		print "Movimento inválido."
 	
 	if comeu:
 		capturas_suce.append((casa_p_comer[0], casa_p_comer[1]))
 
-	ha_cap_possivel = eh_possivel_capturar(pecas, turno, capturas_suce)
+	if len(capturas_suce) > 0:
+		houve_cap_antes = True
+	else:
+		houve_cap_antes = False
+
+	if not houve_cap_antes:
+		ha_cap_possivel = eh_possivel_capturar_geral(pecas, turno, capturas_suce)
+	else:
+		ha_cap_possivel = eh_possivel_capturar_especifico(pecas, turno, capturas_suce, casa_atual)
 	
 	if not ha_cap_possivel: # só devemos transformar a peça em dama quando não houverem mais capturas a serem feitas
 		#transforma ultima linha em dama
@@ -266,9 +288,9 @@ def mover_peca(peca_selec, casa, pecas, mov_poss, capturas_suce):
 			pecas[capturas_suce[j][0]][capturas_suce[j][1]] = 0
 	
 	if houve_mov and not comeu:
-		return True, False
+		return True, False, casa_atual
 
-	return houve_mov, ha_cap_possivel
+	return houve_mov, ha_cap_possivel, casa_atual
 
 def gera_matriz_movs_possiveis(peca_selec, pecas, capturas_suce, turno):
 	# retorna se houve movimento
@@ -327,7 +349,7 @@ def gera_matriz_movs_possiveis(peca_selec, pecas, capturas_suce, turno):
 	return mov_poss
 
 def verifica_movs_possiveis(mov_poss, pecas, capturas_suce, turno):
-	if eh_possivel_capturar(pecas, turno, capturas_suce):
+	if eh_possivel_capturar_geral(pecas, turno, capturas_suce):
 		for i in range(8):
 			for j in range(8):
 				if mov_poss[i][j] == 1:
@@ -355,12 +377,10 @@ def testa_fim_de_jogo(pecas, num_jogadas, status_do_jogo):
 		return True, 2
 	elif (qtde_pecas[1] != 0 or qtde_pecas[3] != 0) and (qtde_pecas[2] == 0 and qtde_pecas[4] == 0):
 		return True, 1
+	elif qtde_pecas[1] + qtde_pecas[2] == 2 and qtde_pecas[3] + qtde_pecas[4] == 0:
+		return True, 0
 
 	return False, 0
-
-def tela_jogar():
-	#ainda a ser feito
-	return False
 
 def tela_fim_de_jogo(vencedor):
 	if vencedor == 0:
@@ -391,15 +411,52 @@ def tela_fim_de_jogo(vencedor):
 			if event.type == pygame.KEYDOWN:
 				sair = True
 
-def creditos():
-	fonte_vencedor = pygame.font.SysFont(fonte_padrao, 60)
+def regras():
+	fonte_titulo = pygame.font.SysFont(fonte_padrao, 60)
 	fonte_legenda = pygame.font.SysFont(fonte_padrao, 30)
 
-	texto_vencedor = fonte_vencedor.render("Creditos", 1, saddlebrown)
-	texto_continuar = fonte_legenda.render("Pressione qualquer tecla para continuar.", 1, saddlebrown)
+	texto_titulo = fonte_titulo.render("Regras", 1, saddlebrown)
+	texto_continuar = fonte_legenda.render("Pressione qualquer tecla para retornar.", 1, saddlebrown)
 
 	gameDisplay.fill(burlywood)
-	gameDisplay.blit(texto_vencedor, (150, 240))
+	gameDisplay.blit(texto_titulo, (320, 10))
+	gameDisplay.blit(fonte_legenda.render("1. O jogo de damas e praticado em um tabuleiro de 64 casas, claras e escuras,", 1, saddlebrown), (20, 80))
+	gameDisplay.blit(fonte_legenda.render("    entre dois parceiros, com 12 pedras brancas de um lado e com 12 pedras", 1, saddlebrown), (20, 110))
+	gameDisplay.blit(fonte_legenda.render("    pretas de outro lado.", 1, saddlebrown), (20, 140))
+	gameDisplay.blit(fonte_legenda.render("2. A pedra anda apenas para frente, uma casa por vez. Ao atingir a oitava linha", 1, saddlebrown), (20, 170))
+	gameDisplay.blit(fonte_legenda.render("    do tabuleiro, vira dama.", 1, saddlebrown), (20, 200))
+	gameDisplay.blit(fonte_legenda.render("3. A dama tem movimentacao diferenciada, anda para frente e para tras quantas", 1, saddlebrown), (20, 230))
+	gameDisplay.blit(fonte_legenda.render("    casas quiser.", 1, saddlebrown), (20, 260))
+	gameDisplay.blit(fonte_legenda.render("4. A captura e obrigatoria. Tanto a pedra quanto a dama podem capturar para", 1, saddlebrown), (20, 290))
+	gameDisplay.blit(fonte_legenda.render("    frente e para tras.", 1, saddlebrown), (20, 320))
+	gameDisplay.blit(fonte_legenda.render("5. A pedra so sera coroada dama ao finalizar a jogada numa casa de coroacao.", 1, saddlebrown), (20, 350))
+	gameDisplay.blit(fonte_legenda.render("Fonte: http://www.damasciencias.com.br/regras/regras_do_jogo.html", 1, saddlebrown), (60, 410))
+	gameDisplay.blit(texto_continuar, (200, 530))
+	pygame.display.update()
+
+	sair = False
+	while not sair:
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
+				pygame.quit()
+				quit()
+
+			if event.type == pygame.KEYDOWN:
+				sair = True
+
+def creditos():
+	fonte_titulo = pygame.font.SysFont(fonte_padrao, 60)
+	fonte_legenda = pygame.font.SysFont(fonte_padrao, 30)
+
+	texto_titulo = fonte_titulo.render("Creditos", 1, saddlebrown)
+	texto_continuar = fonte_legenda.render("Pressione qualquer tecla para retornar.", 1, saddlebrown)
+
+	gameDisplay.fill(burlywood)
+	gameDisplay.blit(texto_titulo, (300, 10))
+	gameDisplay.blit(fonte_legenda.render("Jogo de damas feito para a disciplina de Programacao 1 - UFCG", 1, saddlebrown), (100, 150))
+	gameDisplay.blit(fonte_legenda.render("Aluno: Mateus Queiroz Cunha", 1, saddlebrown), (100, 180))
+	gameDisplay.blit(fonte_legenda.render("Versao Python: 2.7.x", 1, saddlebrown), (100, 210))
+	gameDisplay.blit(fonte_legenda.render("Versao Pygame: 1.9.1", 1, saddlebrown), (100, 240))
 	gameDisplay.blit(texto_continuar, (200, 530))
 	pygame.display.update()
 
@@ -461,7 +518,7 @@ def menu_inicial():
 						gameDisplay.fill(burlywood)
 						gameDisplay.blit(fonte_titulo.render("Jogo de Damas", 1, saddlebrown), (250, 150))
 					elif mouse_y > 300 and mouse_y < 300 + 30:
-						creditos()
+						regras()
 						gameDisplay.fill(burlywood)
 						gameDisplay.blit(fonte_titulo.render("Jogo de Damas", 1, saddlebrown), (250, 150))
 					elif mouse_y > 350 and mouse_y < 360 + 30:
@@ -476,23 +533,36 @@ def menu_inicial():
 
 def jogo():
 	# 1 = preta; 2 = branca; 3 = dama preta; 4 = dama branca;
-	#pecas = [[0,0,0,0,0,0,0,0],
-	#		 [0,0,1,0,1,0,1,0],
-	#		 [0,0,0,0,0,0,0,0],
-	#		 [0,0,1,0,1,0,1,0],
-	#		 [0,0,0,0,0,0,0,2],
-	#		 [0,0,0,0,0,0,0,0],
-	#		 [0,0,0,0,0,0,0,0],
-	#		 [0,0,2,0,0,0,0,0]]
 
-	pecas = [[1,0,1,0,1,0,1,0],
-	  		 [0,1,0,1,0,1,0,1],
-			 [1,0,1,0,1,0,1,0],
-	  		 [0,0,0,0,0,0,0,0],
-	  		 [0,0,0,0,0,0,0,0],
-			 [0,2,0,2,0,2,0,2],
-	  		 [2,0,2,0,2,0,2,0],	
-	  		 [0,2,0,2,0,2,0,2]]
+	#teste dama fim da jogada e empate 1vs1
+	pecas = [[0,0,0,0,0,0,0,0],
+			 [0,0,1,0,1,0,0,0],
+			 [0,0,0,0,0,0,0,0],
+			 [1,0,0,0,0,0,1,0],
+			 [0,0,0,0,0,0,0,2],
+			 [0,0,0,0,0,0,0,0],
+			 [0,0,0,0,0,0,0,0],
+			 [0,0,2,0,0,0,0,0]]
+
+	# Tabuleiro completo
+	#pecas = [[1,0,1,0,1,0,1,0],
+	#  		 [0,1,0,1,0,1,0,1],
+	#		 [1,0,1,0,1,0,1,0],
+	#  		 [0,0,0,0,0,0,0,0],
+	#  		 [0,0,0,0,0,0,0,0],
+	#		 [0,2,0,2,0,2,0,2],
+	#  		 [2,0,2,0,2,0,2,0],	
+	#  		 [0,2,0,2,0,2,0,2]]
+
+	# Teste captura dupla
+	#pecas = [[1,0,1,0,1,0,1,0],
+	#  		 [0,1,0,1,0,1,0,1],
+	#		 [0,0,0,0,0,0,0,0],
+	#  		 [0,0,0,0,0,0,0,0],
+	#  		 [0,0,0,0,0,0,0,0],
+	#		 [0,1,0,0,0,1,0,0],
+	#  		 [2,0,2,0,2,0,2,0],	
+	#  		 [0,2,0,2,0,2,0,2]]
 
 	mov_poss = zera_movs_possiveis()
 
@@ -502,6 +572,7 @@ def jogo():
 	ultima_peca = (-1, -1)
 	capturas_suce = []
 	fim_de_jogo = False
+	casa_atual = (0,0)
 
 	fonte_botao = pygame.font.SysFont(fonte_padrao, 30)
 
@@ -521,7 +592,7 @@ def jogo():
 					casa = mouse_y/70, mouse_x/70
 					
 					if selecao == 1:
-						houve_mov, ainda_ha_cap = mover_peca(peca_selec, casa, pecas, mov_poss, capturas_suce)
+						houve_mov, ainda_ha_cap, casa_atual = mover_peca(peca_selec, casa, pecas, mov_poss, capturas_suce, casa_atual)
 						if houve_mov and not ainda_ha_cap:
 							status_do_jogo[3] *= -1 #muda o turno
 							status_do_jogo[2] += 1 #qtde de jogadas
